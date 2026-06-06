@@ -1,0 +1,6 @@
+{
+  "name": "MBA Biodata Portfolio Builder",
+  "description": "An interactive digital portfolio builder and Next.js developer kit tailored for Manisha Kamal, MBA Student at Chandigarh University, featuring ready-to-deploy Next.js boilerplates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
