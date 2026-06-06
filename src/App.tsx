@@ -26,15 +26,18 @@ import {
   Download,
   CheckCircle2,
   ExternalLink,
-  BookOpen
+  BookOpen,
+  Lock,
+  Unlock,
+  EyeOff
 } from "lucide-react";
 import { DEFAULT_PROFILE, NEXT_BOILERPLATE_FILES, BIODATA_CHECKLIST, NEW_ARCHITECTURE_NODES } from "./data";
 import { FileTemplate, ChecklistItem, ChatMessage, ArchitectureNode, ProfileInfo } from "./types";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function App() {
-  // Navigation mode state - "website" shows the direct full webpage, "developer" shows the toolbox
-  const [viewMode, setViewMode] = useState<"website" | "developer">("website");
+  // Navigation mode state - "website" shows the direct full webpage, "developer" shows the toolbox, "backend" shows password-protected panel
+  const [viewMode, setViewMode] = useState<"website" | "developer" | "backend">("website");
 
   // Profile state for live-customization
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
@@ -59,6 +62,83 @@ export default function App() {
   // Interactive message mockup stats
   const [contactForm, setContactForm] = useState({ name: "", email: "", msg: "", subject: "MBA Marketing Advisory" });
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
+
+  // Password-protected Admin settings states
+  const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean>(false);
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [passwordInput, setPasswordInput] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string>("");
+
+  // Live webpage toggle section statuses
+  const [showSkills, setShowSkills] = useState<boolean>(true);
+  const [showExperience, setShowExperience] = useState<boolean>(true);
+  const [showProjects, setShowProjects] = useState<boolean>(true);
+  const [showAcademicBackground, setShowAcademicBackground] = useState<boolean>(true);
+  const [showContactForm, setShowContactForm] = useState<boolean>(true);
+
+  // Experience and Projects mutation handlers for the secure back-office manager
+  const handleAddExperience = () => {
+    const newExp = {
+      role: "Strategy & Marketing Analyst",
+      organization: "Dynamic Corporate Ventures LLC",
+      duration: "Present Milestone",
+      description: "Administer growth strategies, perform regression-based performance assays, and construct market capitalization reviews."
+    };
+    setProfile(prev => ({
+      ...prev,
+      experience: [...prev.experience, newExp]
+    }));
+  };
+
+  const handleRemoveExperience = (idx: number) => {
+    setProfile(prev => ({
+      ...prev,
+      experience: prev.experience.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleExperienceFieldUpdate = (idx: number, field: "role" | "organization" | "duration" | "description", val: string) => {
+    setProfile(prev => {
+      const updated = [...prev.experience];
+      updated[idx] = { ...updated[idx], [field]: val };
+      return { ...prev, experience: updated };
+    });
+  };
+
+  const handleAddProject = () => {
+    const newProj = {
+      title: "Executive Strategic Restructures Proposal",
+      desc: "Designed and mapped cross-functional framework models to mitigate brand deterioration threats in saturated FMCG hubs.",
+      tag: "Case Study"
+    };
+    setProfile(prev => ({
+      ...prev,
+      projects: [...prev.projects, newProj]
+    }));
+  };
+
+  const handleRemoveProject = (idx: number) => {
+    setProfile(prev => ({
+      ...prev,
+      projects: prev.projects.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleProjectFieldUpdate = (idx: number, field: "title" | "desc" | "tag", val: string) => {
+    setProfile(prev => {
+      const updated = [...prev.projects];
+      updated[idx] = { ...updated[idx], [field]: val };
+      return { ...prev, projects: updated };
+    });
+  };
+
+  const handleAdminEnterRequest = () => {
+    if (isAdminAuthorized) {
+      setViewMode("backend");
+    } else {
+      setShowLoginModal(true);
+    }
+  };
 
   // Gemini assistant console state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -309,13 +389,25 @@ export default function App() {
               </div>
 
               {/* Quick Contacts */}
-              <div className="hidden md:flex items-center gap-4 text-xs">
-                <a href={`mailto:${profile.email}`} className="text-slate-400 hover:text-cyan-400 transition-colors flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>{profile.email}</span>
-                </a>
-                <span className="text-slate-800">|</span>
-                <span className="text-zinc-400 font-mono">{profile.university}</span>
+              <div className="flex items-center gap-4 text-xs">
+                <div className="hidden lg:flex items-center gap-4">
+                  <a href={`mailto:${profile.email}`} className="text-slate-400 hover:text-cyan-400 transition-colors flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>{profile.email}</span>
+                  </a>
+                  <span className="text-slate-800">|</span>
+                  <span className="text-zinc-400 font-mono">{profile.university}</span>
+                  <span className="text-slate-800">|</span>
+                </div>
+                
+                <button 
+                  onClick={handleAdminEnterRequest}
+                  className="px-3.5 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-505 border-indigo-500/30 text-indigo-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-sm shadow-indigo-950/60 cursor-pointer"
+                  id="header_edit_button"
+                >
+                  <Lock className="h-3.5 w-3.5 text-indigo-400" />
+                  <span>Edit you page</span>
+                </button>
               </div>
             </header>
 
@@ -375,75 +467,90 @@ export default function App() {
 
             {/* Core Info Blocks Grid */}
             <section className="bg-slate-950 py-20 px-6 sm:px-12 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-10">
-              
-              {/* Timeline Experience (Col-Span-7) */}
+                          {/* Timeline Experience (Col-Span-7) */}
               <div className="lg:col-span-7 space-y-8 text-left">
-                <div className="flex items-center gap-2.5 pb-2 border-b border-slate-900">
-                  <div className="p-2 bg-violet-950 text-violet-400 rounded-lg">
-                    <Briefcase className="h-4 w-4" />
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-wide">Professional Trajectory</h2>
-                </div>
-
-                <div className="space-y-6">
-                  {profile.experience.map((exp, idx) => (
-                    <div 
-                      key={idx}
-                      className="bg-slate-900/40 border border-slate-900 p-6 rounded-2xl relative overflow-hidden group hover:border-slate-800 transition-all shadow-md"
-                    >
-                      <div className="absolute top-0 left-0 bottom-0 w-1 bg-gradient-to-b from-cyan-500 to-indigo-600 group-hover:from-cyan-400"></div>
-                      <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-3">
-                        <div>
-                          <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">{exp.role}</h3>
-                          <p className="text-sm text-indigo-400 font-medium font-mono">{exp.organization}</p>
-                        </div>
-                        <span className="text-xs font-mono text-slate-450 bg-slate-950 border border-slate-800 px-3 py-1 rounded-full">
-                          {exp.duration}
-                        </span>
+                {showExperience && (
+                  <>
+                    <div className="flex items-center gap-2.5 pb-2 border-b border-slate-900">
+                      <div className="p-2 bg-violet-950 text-violet-400 rounded-lg">
+                        <Briefcase className="h-4 w-4" />
                       </div>
-                      <p className="text-xs sm:text-sm text-slate-450 text-slate-400 leading-relaxed">
-                        {exp.description}
-                      </p>
+                      <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-wide">Professional Trajectory</h2>
                     </div>
-                  ))}
-                </div>
 
-                {/* Academic projects Case studies */}
-                <div className="pt-6 space-y-6">
-                  <div className="flex items-center gap-2.5 pb-2 border-b border-slate-900">
-                    <div className="p-2 bg-rose-955 text-rose-455 p-2 bg-rose-950 text-rose-400 rounded-lg">
-                      <BookOpen className="h-4 w-4" />
-                    </div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-wide">Strategic Academic Initiatives</h2>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {profile.projects.map((proj, idx) => (
-                      <div 
-                        key={idx}
-                        className="bg-slate-900/30 border border-slate-900 p-5 rounded-2xl flex flex-col justify-between group hover:border-slate-800 transition-all text-left"
-                      >
-                        <div>
-                          <div className="flex justify-between items-center mb-2.5">
-                            <span className="text-[9px] uppercase font-mono tracking-widest text-rose-400 px-2.5 py-0.5 bg-rose-500/10 border border-rose-500/10 rounded">
-                              {proj.tag}
+                    <div className="space-y-6">
+                      {profile.experience.map((exp, idx) => (
+                        <div 
+                          key={idx}
+                          className="bg-slate-900/40 border border-slate-900 p-6 rounded-2xl relative overflow-hidden group hover:border-slate-800 transition-all shadow-md"
+                        >
+                          <div className="absolute top-0 left-0 bottom-0 w-1 bg-gradient-to-b from-cyan-500 to-indigo-600 group-hover:from-cyan-400"></div>
+                          <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-3">
+                            <div>
+                              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">{exp.role}</h3>
+                              <p className="text-sm text-indigo-400 font-medium font-mono">{exp.organization}</p>
+                            </div>
+                            <span className="text-xs font-mono text-slate-400 bg-slate-950 border border-slate-800 px-3 py-1 rounded-full">
+                              {exp.duration}
                             </span>
-                            <span className="text-[10px] font-mono text-slate-500">Market Study</span>
                           </div>
-                          <h3 className="text-sm sm:text-base font-bold text-slate-200 mt-2 leading-tight group-hover:text-white">{proj.title}</h3>
-                          <p className="text-xs text-slate-450 text-slate-400 mt-2.5 leading-relaxed line-clamp-3">
-                            {proj.desc}
+                          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            {exp.description}
                           </p>
                         </div>
-                        
-                        <div className="mt-4 pt-3 border-t border-slate-900 flex items-center justify-between text-[11px] text-indigo-400 font-mono">
-                          <span>Verified Analysis</span>
-                          <ChevronRight className="h-3 w-3 text-indigo-400" />
-                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Academic projects Case studies */}
+                {showProjects && (
+                  <div className="pt-6 space-y-6">
+                    <div className="flex items-center gap-2.5 pb-2 border-b border-slate-900">
+                      <div className="p-2 bg-rose-950 text-rose-400 rounded-lg">
+                        <BookOpen className="h-4 w-4" />
                       </div>
-                    ))}
+                      <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-wide">Strategic Academic Initiatives</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {profile.projects.map((proj, idx) => (
+                        <div 
+                          key={idx}
+                          className="bg-slate-900/30 border border-slate-900 p-5 rounded-2xl flex flex-col justify-between group hover:border-slate-800 transition-all text-left"
+                        >
+                          <div>
+                            <div className="flex justify-between items-center mb-2.5">
+                              <span className="text-[9px] uppercase font-mono tracking-widest text-rose-400 px-2.5 py-0.5 bg-rose-500/10 border border-rose-500/10 rounded">
+                                {proj.tag}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-500">Market Study</span>
+                            </div>
+                            <h3 className="text-sm sm:text-base font-bold text-slate-200 mt-2 leading-tight group-hover:text-white">{proj.title}</h3>
+                            <p className="text-xs text-slate-400 mt-2.5 leading-relaxed line-clamp-3">
+                              {proj.desc}
+                            </p>
+                          </div>
+                          
+                          <div className="mt-4 pt-3 border-t border-slate-900 flex items-center justify-between text-[11px] text-indigo-400 font-mono">
+                            <span>Verified Analysis</span>
+                            <ChevronRight className="h-3 w-3 text-indigo-400" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {!showExperience && !showProjects && (
+                  <div className="p-10 bg-slate-900/20 border border-slate-900/60 rounded-3xl text-center space-y-2">
+                    <EyeOff className="h-10 w-10 text-slate-600 mx-auto" />
+                    <p className="text-sm text-slate-400 font-semibold font-mono uppercase tracking-wider">Timeline Trajectory Off</p>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                      The candidate has temporarily disabled professional timeline experiences and academic initiatives from rendering.
+                    </p>
+                  </div>
+                )}
 
               </div>
 
@@ -451,117 +558,130 @@ export default function App() {
               <div className="lg:col-span-5 space-y-8 text-left">
                 
                 {/* Academic Background Card */}
-                <div className="bg-gradient-to-br from-indigo-950/50 to-slate-950 border border-slate-900 p-6 rounded-3xl space-y-4 shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 h-40 w-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
-                  <h3 className="text-xs font-mono text-cyan-400 uppercase tracking-widest">Academic Foundation</h3>
-                  
-                  <div className="space-y-2">
-                    <h4 className="text-lg font-bold text-white font-sans">{profile.university}</h4>
-                    <p className="text-sm text-slate-300">{profile.program}</p>
-                    <p className="text-xs text-indigo-400 font-medium">Specialization: {profile.specialization}</p>
-                  </div>
+                {showAcademicBackground && (
+                  <div className="bg-gradient-to-br from-indigo-950/50 to-slate-950 border border-slate-900 p-6 rounded-3xl space-y-4 shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 h-40 w-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                    <h3 className="text-xs font-mono text-cyan-400 uppercase tracking-widest">Academic Foundation</h3>
+                    
+                    <div className="space-y-2">
+                      <h4 className="text-lg font-bold text-white font-sans">{profile.university}</h4>
+                      <p className="text-sm text-slate-300">{profile.program}</p>
+                      <p className="text-xs text-indigo-400 font-medium">Specialization: {profile.specialization}</p>
+                    </div>
 
-                  <p className="text-xs text-slate-450 text-slate-400 leading-relaxed">
-                    Building robust administrative faculties centered on Corporate Development, Advanced Financial Forecasting, Omnichannel marketing paradigms, and Team leadership structures.
-                  </p>
-                  
-                  <div className="pt-2 border-t border-slate-900 flex items-center justify-between text-xs font-mono text-slate-450">
-                    <span className="text-slate-500">Graduation Timeline</span>
-                    <span className="px-2.5 py-0.5 bg-cyan-950 text-cyan-400 border border-cyan-500/20 rounded-full">
-                      Expected {profile.graduationYear}
-                    </span>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Building robust administrative faculties centered on Corporate Development, Advanced Financial Forecasting, Omnichannel marketing paradigms, and Team leadership structures.
+                    </p>
+                    
+                    <div className="pt-2 border-t border-slate-900 flex items-center justify-between text-xs font-mono text-slate-450">
+                      <span className="text-slate-500">Graduation Timeline</span>
+                      <span className="px-2.5 py-0.5 bg-cyan-950 text-cyan-400 border border-cyan-500/20 rounded-full">
+                        Expected {profile.graduationYear}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Specialties Matrix */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-indigo-950">
-                    <div className="p-1.5 bg-cyan-950 text-cyan-400 rounded-md">
-                      <Award className="h-4 w-4" />
-                    </div>
-                    <h3 className="text-sm font-mono font-bold text-slate-300 uppercase tracking-wide">Key Professional Specialties</h3>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 text-left">
-                    {profile.skills.map((skill, index) => (
-                      <div 
-                        key={index}
-                        className="py-2 px-3 bg-slate-900/40 border border-slate-900 rounded-xl hover:border-slate-800 transition-all flex items-center gap-2"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-                        <span className="text-xs font-semibold text-slate-300">{skill}</span>
+                {showSkills && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-indigo-950">
+                      <div className="p-1.5 bg-cyan-950 text-cyan-400 rounded-md">
+                        <Award className="h-4 w-4" />
                       </div>
-                    ))}
+                      <h3 className="text-sm font-mono font-bold text-slate-300 uppercase tracking-wide">Key Professional Specialties</h3>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-left">
+                      {profile.skills.map((skill, index) => (
+                        <div 
+                          key={index}
+                          className="py-2 px-3 bg-slate-900/40 border border-slate-900 rounded-xl hover:border-slate-800 transition-all flex items-center gap-2"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                          <span className="text-xs font-semibold text-slate-300">{skill}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Interactive Contact simulator form */}
-                <div className="bg-slate-900/20 border border-slate-900 p-6 rounded-2xl space-y-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-cyan-400" />
-                      Get In Touch (Enquiries)
-                    </h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Send a corporate proposal or message to Manisha.</p>
-                  </div>
-
-                  <form onSubmit={handleMockSubmit} className="space-y-3">
+                {showContactForm && (
+                  <div className="bg-slate-900/20 border border-slate-900 p-6 rounded-2xl space-y-4">
                     <div>
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="Your Name (e.g. Hiring Manager)"
-                        value={contactForm.name}
-                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-slate-200"
-                      />
-                    </div>
-                    <div>
-                      <input 
-                        type="email" 
-                        placeholder="Your Email Coordinate (Optional)"
-                        value={contactForm.email}
-                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-855 bg-slate-950 border-slate-850 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-slate-200"
-                      />
-                    </div>
-                    <div>
-                      <textarea 
-                        rows={3}
-                        required
-                        placeholder="Write your message detail here..."
-                        value={contactForm.msg}
-                        onChange={(e) => setContactForm({ ...contactForm, msg: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-slate-200"
-                      />
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-cyan-400" />
+                        Get In Touch (Enquiries)
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Send a corporate proposal or message to Manisha.</p>
                     </div>
 
-                    <button 
-                      type="submit"
-                      className="w-full py-2 bg-gradient-to-r from-cyan-600 to-indigo-650 justify-center bg-indigo-900/60 hover:bg-indigo-900 border border-indigo-500/20 text-indigo-200 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-all text-white cursor-pointer"
-                    >
-                      <Send className="h-3 w-3" />
-                      <span>Transmit Interactive Message</span>
-                    </button>
-                  </form>
+                    <form onSubmit={handleMockSubmit} className="space-y-3">
+                      <div>
+                        <input 
+                          type="text" 
+                          required
+                          placeholder="Your Name (e.g. Hiring Manager)"
+                          value={contactForm.name}
+                          onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-slate-200"
+                        />
+                      </div>
+                      <div>
+                        <input 
+                          type="email" 
+                          placeholder="Your Email Coordinate (Optional)"
+                          value={contactForm.email}
+                          onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-slate-200"
+                        />
+                      </div>
+                      <div>
+                        <textarea 
+                          rows={3}
+                          required
+                          placeholder="Write your message detail here..."
+                          value={contactForm.msg}
+                          onChange={(e) => setContactForm({ ...contactForm, msg: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-slate-200"
+                        />
+                      </div>
 
-                  <AnimatePresence>
-                    {isSubmitSuccess && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="p-3 bg-emerald-950/40 text-emerald-300 border border-emerald-500/20 rounded-lg text-[11px] text-left leading-relaxed flex gap-2 items-start"
+                      <button 
+                        type="submit"
+                        className="w-full py-2 bg-gradient-to-r from-cyan-600 to-indigo-650 justify-center bg-indigo-900/60 hover:bg-indigo-900 border border-indigo-500/20 text-indigo-200 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-all text-white cursor-pointer"
                       >
-                        <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-bold">Transmission Successful!</p>
-                          <p className="text-slate-400 mt-0.5">Your simulation message has been captured. In the compiled Next.js site code, this will forward directly to {profile.email}.</p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                        <Send className="h-3 w-3" />
+                        <span>Transmit Interactive Message</span>
+                      </button>
+                    </form>
+
+                    <AnimatePresence>
+                      {isSubmitSuccess && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="p-3 bg-emerald-950/40 text-emerald-300 border border-emerald-500/20 rounded-lg text-[11px] text-left leading-relaxed flex gap-2 items-start"
+                        >
+                          <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-bold">Transmission Successful!</p>
+                            <p className="text-slate-400 mt-0.5">Your simulation message has been captured. In the compiled Next.js site code, this will forward directly to {profile.email}.</p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
+                {!showAcademicBackground && !showSkills && !showContactForm && (
+                  <div className="p-8 bg-slate-900/20 border border-slate-900/60 rounded-3xl text-center space-y-1">
+                    <EyeOff className="h-8 w-8 text-slate-650 mx-auto mb-1" />
+                    <p className="text-xs text-slate-450 font-semibold font-mono uppercase text-slate-400">Right Desk Modules Disabled</p>
+                  </div>
+                )}
 
               </div>
 
@@ -569,7 +689,7 @@ export default function App() {
 
             {/* Structured Page Footer */}
             <footer className="border-t border-slate-900 bg-slate-950 py-12 px-6 text-center text-xs text-slate-500 font-mono space-y-2 mt-auto">
-              <div className="flex justify-center gap-3">
+              <div className="flex justify-center flex-wrap gap-3">
                 <button 
                   onClick={() => setViewMode("developer")}
                   className="text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
@@ -578,13 +698,21 @@ export default function App() {
                   <span>Interactive Next.js Code Exporter</span>
                 </button>
                 <span>&bull;</span>
+                <button 
+                  onClick={handleAdminEnterRequest}
+                  className="text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Edit you page (Admin Portal)</span>
+                </button>
+                <span>&bull;</span>
                 <span className="text-slate-500">{profile.university} Candidate Showcase</span>
               </div>
               <p>Copyright &copy; {new Date().getFullYear()} {profile.fullName} &bull; Strategic MBA Biodata Portfolio</p>
               <p className="text-[10px] text-zinc-650">Fully responsive single-screen deployment package ready for GitHub Pages & Vercel compiles</p>
             </footer>
           </motion.div>
-        ) : (
+        ) : viewMode === "developer" ? (
           
           /* VIEW 2: MULTI-COLUMN DEVELOPER SETUP EXPORTER & LIVE CUSTOMIZER WORKSPACE */
           <motion.div
@@ -1115,9 +1243,519 @@ export default function App() {
 
             </div>
           </motion.div>
+        ) : (
+          /* VIEW 3: SECURE BACKEND PORTAL */
+          <motion.div
+            key="backend_view"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="flex-grow flex flex-col p-4 md:p-8 text-left bg-slate-950 w-full space-y-6"
+          >
+            {/* Dashboard Header Banner */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-xl text-white shadow-lg shadow-emerald-950/40">
+                  <Settings className="h-5 w-5" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-extrabold text-white">MBA Backend Customizer Engine</h1>
+                  <p className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 mt-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>SESSION SECURE &bull; CANDIDATE: MANISHA KAMAL</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setViewMode("website")}
+                  className="px-4 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>Return to Webpage</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("developer")}
+                  className="px-4 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                >
+                  <Code2 className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Next.js Source code</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsAdminAuthorized(false);
+                    setViewMode("website");
+                  }}
+                  className="px-4 py-2 bg-rose-950 hover:bg-rose-900 border border-rose-900/10 text-rose-300 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Lock Console / Exit</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Main Interactive Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* Left Column: Essential Toggles & Attributes (Col-Span-4) */}
+              <div className="lg:col-span-4 space-y-6">
+                
+                {/* 1. SECTION VISIBILITY INTERACTIVE CONTROLS */}
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg space-y-4">
+                  <h3 className="text-sm font-mono font-bold text-slate-300 uppercase tracking-wider pb-2 border-b border-slate-800 flex items-center gap-2">
+                    <Sliders className="h-4 w-4 text-emerald-400" />
+                    Layout Section Toggles
+                  </h3>
+                  
+                  <div className="space-y-3.5 text-xs text-slate-300">
+                    
+                    {/* Toggle 1: Academic Background */}
+                    <div className="flex items-center justify-between p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                      <div>
+                        <p className="font-bold font-sans">Academic Foundation</p>
+                        <p className="text-[10px] text-slate-500">School & Degree overview</p>
+                      </div>
+                      <button
+                        onClick={() => setShowAcademicBackground(!showAcademicBackground)}
+                        className={`w-10 h-5 rounded-full p-0.5 transition-all outline-none cursor-pointer flex ${
+                          showAcademicBackground ? "bg-emerald-500 justify-end" : "bg-slate-800 justify-start"
+                        }`}
+                      >
+                        <span className="w-4 h-4 bg-white rounded-full shadow-md"></span>
+                      </button>
+                    </div>
+
+                    {/* Toggle 2: Skills */}
+                    <div className="flex items-center justify-between p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                      <div>
+                        <p className="font-bold">Specialties Matrix</p>
+                        <p className="text-[10px] text-slate-500">Skills chips block</p>
+                      </div>
+                      <button
+                        onClick={() => setShowSkills(!showSkills)}
+                        className={`w-10 h-5 rounded-full p-0.5 transition-all outline-none cursor-pointer flex ${
+                          showSkills ? "bg-emerald-500 justify-end" : "bg-slate-800 justify-start"
+                        }`}
+                      >
+                        <span className="w-4 h-4 bg-white rounded-full shadow-md"></span>
+                      </button>
+                    </div>
+
+                    {/* Toggle 3: Experiences */}
+                    <div className="flex items-center justify-between p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                      <div>
+                        <p className="font-bold">Professional Trajectory</p>
+                        <p className="text-[10px] text-slate-500">Milestone timeline blocks</p>
+                      </div>
+                      <button
+                        onClick={() => setShowExperience(!showExperience)}
+                        className={`w-10 h-5 rounded-full p-0.5 transition-all outline-none cursor-pointer flex ${
+                          showExperience ? "bg-emerald-500 justify-end" : "bg-slate-800 justify-start"
+                        }`}
+                      >
+                        <span className="w-4 h-4 bg-white rounded-full shadow-md"></span>
+                      </button>
+                    </div>
+
+                    {/* Toggle 4: Projects */}
+                    <div className="flex items-center justify-between p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                      <div>
+                        <p className="font-bold">Strategic Initiatives</p>
+                        <p className="text-[10px] text-slate-500">Academic projects & study cases</p>
+                      </div>
+                      <button
+                        onClick={() => setShowProjects(!showProjects)}
+                        className={`w-10 h-5 rounded-full p-0.5 transition-all outline-none cursor-pointer flex ${
+                          showProjects ? "bg-emerald-500 justify-end" : "bg-slate-800 justify-start"
+                        }`}
+                      >
+                        <span className="w-4 h-4 bg-white rounded-full shadow-md"></span>
+                      </button>
+                    </div>
+
+                    {/* Toggle 5: Contacts */}
+                    <div className="flex items-center justify-between p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                      <div>
+                        <p className="font-bold">Interactive Enquiries Form</p>
+                        <p className="text-[10px] text-slate-500">Contact simulators</p>
+                      </div>
+                      <button
+                        onClick={() => setShowContactForm(!showContactForm)}
+                        className={`w-10 h-5 rounded-full p-0.5 transition-all outline-none cursor-pointer flex ${
+                          showContactForm ? "bg-emerald-500 justify-end" : "bg-slate-800 justify-start"
+                        }`}
+                      >
+                        <span className="w-4 h-4 bg-white rounded-full shadow-md"></span>
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* 2. CORE BIODATA ATTRIBUTES */}
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg space-y-4">
+                  <h3 className="text-sm font-mono font-bold text-slate-300 uppercase tracking-wider pb-2 border-b border-slate-800 flex items-center gap-2">
+                    <Award className="h-4 w-4 text-emerald-400" />
+                    Essential Metadata
+                  </h3>
+                  
+                  <div className="space-y-3.5 text-xs text-slate-300">
+                    
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-500 uppercase">Full Name</label>
+                      <input
+                        type="text"
+                        value={profile.fullName}
+                        onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-550 text-slate-500 uppercase">Education Coordinates</label>
+                      <input
+                        type="text"
+                        value={profile.university}
+                        onChange={(e) => setProfile({ ...profile, university: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-500 uppercase">MBA Program Title</label>
+                      <input
+                        type="text"
+                        value={profile.program}
+                        onChange={(e) => setProfile({ ...profile, program: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-mono text-slate-500 uppercase">Specialization</label>
+                        <input
+                          type="text"
+                          value={profile.specialization}
+                          onChange={(e) => setProfile({ ...profile, specialization: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-emerald-500 font-semibold"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-mono text-slate-500 uppercase">Graduation Year</label>
+                        <input
+                          type="text"
+                          value={profile.graduationYear}
+                          onChange={(e) => setProfile({ ...profile, graduationYear: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white tracking-widest font-mono outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-500 uppercase">Corporate Email</label>
+                      <input
+                        type="email"
+                        value={profile.email}
+                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-emerald-500 font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-500 uppercase font-bold">Career Outline / Bio</label>
+                      <textarea
+                        rows={4}
+                        value={profile.bio}
+                        onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 leading-relaxed outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right Column: Experience timelines and Projects (Col-Span-8) */}
+              <div className="lg:col-span-8 space-y-6">
+                
+                {/* 3. PROFESSIONAL MILESTONES (EXPERIENCE BUILDER) */}
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg space-y-4">
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                    <h3 className="text-sm font-mono font-bold text-slate-300 uppercase tracking-wide flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-cyan-400" />
+                      Trajectory Milestones Timeline
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleAddExperience}
+                      className="px-2.5 py-1 bg-gradient-to-r from-cyan-600 to-indigo-650 justify-center text-[11px] font-bold border border-indigo-500/20 text-white rounded hover:text-cyan-200 flex items-center gap-1 cursor-pointer transition-all"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add Milestone
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {profile.experience.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-slate-500 font-mono">
+                        No milestone timeline segments present. Click "Add Milestone" to populate strategic experiences.
+                      </div>
+                    ) : (
+                      profile.experience.map((exp, idx) => (
+                        <div key={idx} className="p-4 bg-slate-950 rounded-xl border border-slate-800 relative space-y-3">
+                          <button type="button" className="absolute top-2.5 right-2 px-1.5 py-1 bg-red-950/20 border border-red-500/10 rounded flex items-center justify-center text-red-400 hover:bg-rose-900/40 transition-all cursor-pointer" onClick={() => handleRemoveExperience(idx)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="space-y-0.5">
+                              <span className="text-[9px] uppercase font-mono text-slate-500">Corporate Role / Title</span>
+                              <input
+                                type="text"
+                                value={exp.role}
+                                onChange={(e) => handleExperienceFieldUpdate(idx, "role", e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white font-bold outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                            <div className="space-y-0.5">
+                              <span className="text-[9px] uppercase font-mono text-slate-500">Organization</span>
+                              <input
+                                type="text"
+                                value={exp.organization}
+                                onChange={(e) => handleExperienceFieldUpdate(idx, "organization", e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-indigo-300 font-semibold outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                            <div className="space-y-0.5">
+                              <span className="text-[9px] uppercase font-mono text-slate-500">Duration Range</span>
+                              <input
+                                type="text"
+                                value={exp.duration}
+                                onChange={(e) => handleExperienceFieldUpdate(idx, "duration", e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-350 outline-none focus:border-cyan-500 font-mono"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] uppercase font-mono text-slate-500">Activity Outline Detail</span>
+                            <textarea
+                              rows={2}
+                              value={exp.description}
+                              onChange={(e) => handleExperienceFieldUpdate(idx, "description", e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 leading-normal outline-none focus:border-cyan-500"
+                            />
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. STRATEGIC INITIATIVES & ACADEMIC CASES */}
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg space-y-4">
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-800 font-bold">
+                    <h3 className="text-sm font-mono text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-rose-400" />
+                      Academic Case Studies & Strategic Initiatives
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleAddProject}
+                      className="px-2.5 py-1 bg-gradient-to-r from-rose-600 to-indigo-650 justify-center text-[11px] font-bold border border-rose-500/20 text-white rounded hover:text-rose-200 flex items-center gap-1 cursor-pointer transition-all"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add Case Analysis
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    {profile.projects.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-slate-500 font-mono">
+                        No strategic case initiatives defined. Click "Add Case Analysis" to initiate.
+                      </div>
+                    ) : (
+                      profile.projects.map((proj, idx) => (
+                        <div key={idx} className="p-4 bg-slate-950 rounded-xl border border-slate-800 relative space-y-3">
+                          <button type="button" className="absolute top-2.5 right-2 px-1.5 py-1 bg-red-950/20 border border-red-500/10 rounded flex items-center justify-center text-red-400 hover:bg-rose-900/40 transition-all cursor-pointer" onClick={() => handleRemoveProject(idx)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-0.5">
+                              <span className="text-[9px] uppercase font-mono text-slate-500 font-bold">Project Headline Title</span>
+                              <input
+                                type="text"
+                                value={proj.title}
+                                onChange={(e) => handleProjectFieldUpdate(idx, "title", e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white outline-none focus:border-rose-500"
+                              />
+                            </div>
+                            <div className="space-y-0.5">
+                              <span className="text-[9px] uppercase font-mono text-slate-500">Case Taxonomy / Tag</span>
+                              <input
+                                type="text"
+                                value={proj.tag}
+                                onChange={(e) => handleProjectFieldUpdate(idx, "tag", e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-350 outline-none focus:border-rose-500 font-semibold"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] uppercase font-mono text-slate-500">Problem Hypothesis & Findings</span>
+                            <textarea
+                              rows={2}
+                              value={proj.desc}
+                              onChange={(e) => handleProjectFieldUpdate(idx, "desc", e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 leading-normal outline-none focus:border-rose-500"
+                            />
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 5. DYNAMIC CHIPS COMPETENCIES */}
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg space-y-4">
+                  <h3 className="text-sm font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <Award className="h-4 w-4 text-emerald-400" />
+                    Key Specialties & Interactive Chip Competencies
+                  </h3>
+
+                  <div className="flex flex-wrap gap-2">
+                    {profile.skills.map((skill, index) => (
+                      <div key={index} className="flex items-center gap-1.5 px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-cyan-300">
+                        <span>{skill}</span>
+                        <button
+                          type="button"
+                          onClick={() => setProfile({ ...profile, skills: profile.skills.filter((_, i) => i !== index) })}
+                          className="h-3.5 w-3.5 rounded-full hover:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-white cursor-pointer leading-none text-center font-bold text-lg"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 text-xs">
+                    <input
+                      type="text"
+                      placeholder="Add another competence (e.g., Financial Modeling)"
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newSkill.trim()) {
+                          setProfile({ ...profile, skills: [...profile.skills, newSkill.trim()] });
+                          setNewSkill("");
+                        }
+                      }}
+                      className="flex-grow bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newSkill.trim()) {
+                          setProfile({ ...profile, skills: [...profile.skills, newSkill.trim()] });
+                          setNewSkill("");
+                        }
+                      }}
+                      className="px-4 py-2 bg-slate-950 hover:bg-slate-850 border border-slate-800 text-slate-200 rounded-lg font-mono tracking-wide hover:text-white cursor-pointer"
+                    >
+                      + Add Chip
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </motion.div>
         )}
 
       </AnimatePresence>
+
+      {/* Password Verification Modal overlay */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl relative text-left"
+          >
+            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
+              <div className="p-2 bg-indigo-950 text-indigo-400 rounded-lg">
+                <Lock className="h-5 w-5 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-base">Backend Portal Access</h3>
+                <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest leading-none block mt-0.5">Security Gateway</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Please enter the security password to unlock the backend biodata management console.
+              <span className="text-cyan-400 font-semibold mt-1 font-mono text-[11px] block">Hint: Default passcode is "1212"</span>
+            </p>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (passwordInput === "1212") {
+                setIsAdminAuthorized(true);
+                setShowLoginModal(false);
+                setPasswordError("");
+                setPasswordInput("");
+                setViewMode("backend");
+              } else {
+                setPasswordError("Incorrect passcode. Try again!");
+              }
+            }} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-mono tracking-wider text-slate-500 font-bold">Passcode Pin</label>
+                <input 
+                  type="password"
+                  autoFocus
+                  placeholder="••••"
+                  maxLength={4}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white tracking-widest font-mono text-center outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {passwordError && (
+                <p className="text-[10.5px] text-rose-400 font-semibold bg-rose-950/20 border border-rose-500/10 p-2 rounded-lg leading-relaxed text-center">
+                  ⚠️ {passwordError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 text-xs">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    setPasswordError("");
+                    setPasswordInput("");
+                  }}
+                  className="px-4 py-2 bg-slate-950 border border-slate-800 text-slate-350 hover:text-white rounded-lg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-indigo-650 justify-center bg-indigo-900/60 hover:bg-emerald-600 hover:text-slate-955 text-slate-200 font-bold border border-indigo-500/20 rounded-lg flex items-center gap-1.5 cursor-pointer text-white"
+                >
+                  Unlock Editor
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
 
     </div>
   );
